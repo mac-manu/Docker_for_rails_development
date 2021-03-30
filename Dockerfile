@@ -1,49 +1,38 @@
-# PRE BUILD: for bundle install and assets:precompile
-FROM ruby:2.5.3-alpine as builder
+FROM ruby:2.5.3
 
-ENV LANG ja_JP.UTF-8
-ENV RAILS_ENV=production
+# The qq is for silent output in the console
+RUN apt-get update -qq && \
+    apt-get install -y build-essential openssl libssl-dev nodejs less vim libsasl2-dev
 
-RUN apk --no-cache --update add \
-    build-base \
-    curl-dev \
-    git \
-    nodejs \
-    yarn \
-    postgresql-dev \
-    tzdata \
-    linux-headers
-RUN gem install bundler
 
-RUN mkdir /app
-WORKDIR /app
+# Sets the path where the app is going to be installed
+# you can modify this as you wish
+ENV WORK_ROOT /var
+ENV RAILS_ROOT $WORK_ROOT/www/
+ENV LANG C.UTF-8
+ENV GEM_HOME $WORK_ROOT/bundle
+ENV BUNDLE_BIN $GEM_HOME/gems/bin
+ENV PATH $GEM_HOME/bin:$BUNDLE_BIN:$PATH
 
-COPY Gemfile Gemfile.lock /app/
-RUN bundle install --jobs=4 --retry=5 --without development test
+RUN gem install bundler -v 2.1.4 #1.17.3
+# Creates the directory and all the parents (if they don't exist)
+RUN mkdir -p $RAILS_ROOT
 
-#COPY package.json yarn.lock /app/
-#RUN yarn install
+WORKDIR $RAILS_ROOT
 
-ADD . /app
-RUN bundle exec rake assets:precompile
+COPY Gemfile ./
 
-# BUILD: for creating image
-FROM ruby:2.5.3-alpine
+# Installs the Gem File.
+RUN bundle install
 
-ENV LANG ja_JP.UTF-8
-ENV RAILS_ENV=production
+# We copy all the files from the current directory to our
+# application directory
+COPY . $RAILS_ROOT
 
-RUN apk add -U --no-cache \
-  bash \
-  libpq \
-  nodejs \
-  tzdata
+# Installs the Gem File.
+RUN bundle install
 
-RUN mkdir /app
-WORKDIR /app
+EXPOSE 3000
 
-ADD . /app
-COPY --from=builder /usr/local/bundle /usr/local/bundle
-COPY --from=builder /app/public/assets /app/public/assets
-
-CMD ["./boot.sh"]
+# Start the main process.
+CMD ["rails", "server", "-b", "0.0.0.0"]
