@@ -14,7 +14,7 @@ ENV GEM_HOME $WORK_ROOT/bundle
 ENV BUNDLE_BIN $GEM_HOME/gems/bin
 ENV PATH $GEM_HOME/bin:$BUNDLE_BIN:$PATH
 
-RUN gem install bundler -v 2.1.4 #1.17.3
+RUN gem install bundler -v 2.1.4 
 # Creates the directory and all the parents (if they don't exist)
 RUN mkdir -p $RAILS_ROOT
 
