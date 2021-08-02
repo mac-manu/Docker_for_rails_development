@@ -1,38 +1,40 @@
-FROM ruby:2.5.3
+FROM ruby:2.6.6-alpine
 
-# The qq is for silent output in the console
-RUN apt-get update -qq && \
-    apt-get install -y build-essential openssl libssl-dev nodejs less vim libsasl2-dev
+ENV APP_PATH /var/app
+ENV BUNDLE_VERSION 2.1.4
+ENV BUNDLE_PATH /usr/local/bundle/gems
+ENV TMP_PATH /tmp/
+ENV RAILS_LOG_TO_STDOUT true
+ENV RAILS_PORT 3000
+
+# copy entrypoint scripts and grant execution permissions
+COPY ./dev-docker-entrypoint.sh /usr/local/bin/dev-entrypoint.sh
+COPY ./test-docker-entrypoint.sh /usr/local/bin/test-entrypoint.sh
+RUN chmod +x /usr/local/bin/dev-entrypoint.sh && chmod +x /usr/local/bin/test-entrypoint.sh
+
+# install dependencies for application
+RUN apk -U add --no-cache \
+build-base \
+git \
+postgresql-dev \
+postgresql-client \
+libxml2-dev \
+libxslt-dev \
+nodejs \
+yarn \
+imagemagick \
+tzdata \
+less \
+&& rm -rf /var/cache/apk/* \
+&& mkdir -p $APP_PATH 
 
 
-# Sets the path where the app is going to be installed
-# you can modify this as you wish
-ENV WORK_ROOT /var
-ENV RAILS_ROOT $WORK_ROOT/www/
-ENV LANG C.UTF-8
-ENV GEM_HOME $WORK_ROOT/bundle
-ENV BUNDLE_BIN $GEM_HOME/gems/bin
-ENV PATH $GEM_HOME/bin:$BUNDLE_BIN:$PATH
+RUN gem install bundler --version "$BUNDLE_VERSION" \
+&& rm -rf $GEM_HOME/cache/*
 
-RUN gem install bundler -v 2.1.4 
-# Creates the directory and all the parents (if they don't exist)
-RUN mkdir -p $RAILS_ROOT
+# navigate to app directory
+WORKDIR $APP_PATH
 
-WORKDIR $RAILS_ROOT
+EXPOSE $RAILS_PORT
 
-COPY Gemfile ./
-
-# Installs the Gem File.
-RUN bundle install
-
-# We copy all the files from the current directory to our
-# application directory
-COPY . $RAILS_ROOT
-
-# Installs the Gem File.
-RUN bundle install
-
-EXPOSE 3000
-
-# Start the main process.
-CMD ["rails", "server", "-b", "0.0.0.0"]
+ENTRYPOINT [ "bundle", "exec" ]
