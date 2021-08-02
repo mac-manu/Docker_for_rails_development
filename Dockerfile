@@ -1,4 +1,4 @@
-FROM ruby:2.5.3
+FROM ruby:2.7
 
 # The qq is for silent output in the console
 RUN apt-get update -qq && \
